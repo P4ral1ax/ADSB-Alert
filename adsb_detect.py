@@ -95,7 +95,7 @@ def main():
         while True:
             # Get Timstamp
             curr_time = get_timestamp(key_dict)
-            print(f"Current Timestamp : {curr_time}")
+            # print(f"Current Timestamp : {curr_time}")
 
             # Look at all active devices (Last 30m) TODO - Make Adjustable in Config
             time_limit = str(int(curr_time) - 1800)
@@ -103,7 +103,7 @@ def main():
             new_device_list = adsb_parse.parse_all_devices(resp)
 
             # Update Device Dictionary with new list
-            device_dict = adsb_parse.update_devices(device_dict, new_device_list, key_dict)
+            device_dict = update_devices(device_dict, new_device_list, key_dict)
             
             time.sleep(10)
     except KeyboardInterrupt:
