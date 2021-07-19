@@ -5,7 +5,7 @@ The dataclass descriptions for each aircraft
 from dataclasses import dataclass
 from typing import List
 
-
+# Define the Dataclass for an Aircraft/Object
 @dataclass
 class Aircraft:
     __slots__ = ["callsign", "name", "last_time", "lat", "lon", "alt", "speed", "heading", "device_key"]

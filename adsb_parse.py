@@ -3,7 +3,7 @@ Parses API response into usable data
 """
 import json
 
-# Parses dataclass
+# Parses response into Dictionary of usefull data
 def parse_object(resp):
 
     # Load Response Data
@@ -34,11 +34,11 @@ def parse_object(resp):
         # Return dictionary
         return(device_data)
     except AttributeError:
-        # Missing Data : Ignoring
+        # Missing Data : Ignore
         return({})
 
-# Parse the file for all ADS-B devices
-# Return All Devices Kismet IDs in a list (That exist last 10m)
+# Parse the response for all ADS-B devices
+# Return All Devices Kismet IDs in a list
 def parse_all_devices(resp):
     list_devices = []
     devices = json.loads(resp.text)
