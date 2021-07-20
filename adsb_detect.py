@@ -139,7 +139,7 @@ def main():
     # Read Config File
     try:
         api_key = parse_config("config.txt") 
-    except configparser.NoSectionError as err:
+    except:
         print("Missing or Incorrect Configuration File. Exiting.")
         quit()
     print(f"\nKey Found : {api_key[0:5]}******************")
