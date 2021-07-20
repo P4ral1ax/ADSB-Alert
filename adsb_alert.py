@@ -189,6 +189,7 @@ main()
 # TODO - Geo + Trajcetory Detection https://geopy.readthedocs.io/en/stable/#module-geopy.distance
 # TODO - Takeoff detection
 # TODO - Some Sort of Status GUI Thing
+# TODO - Fix Config Workflow
 
 ## Part 2 - Trends 
 # TODO - Log All times a Device is Seen (Use ICAO as Key)
