@@ -35,9 +35,13 @@ def update_devices(devices_dict, devices, key):
 
         # If exists, update info. Else create new object and add to dictionary
         if d in devices_dict.keys():
-            # Update object using device ID to grab from dictionary
-            device_updated = adsb_make_device.update_device(devices_dict.get(d), resp)
-            devices_dict[d] = device_updated
+            try: 
+                # Update object using device ID to grab from dictionary
+                # Skip if missing important data
+                device_updated = adsb_make_device.update_device(devices_dict.get(d), resp) # Throws exception
+                devices_dict[d] = device_updated
+            except ValueError as err:
+                print("Update Missing Data : Ignoring")
         else:
             try:  
                 # Add new device with the device ID being the key in the dictionary
@@ -50,7 +54,7 @@ def update_devices(devices_dict, devices, key):
                 pass
             # Missing Essential Data : Skip Device
             except ValueError as err:
-                print(f"{d} : {err.args}")
+                print(f"{d} : {str(err)}")
 
 
     # Return dictionary after all objects updated

@@ -34,12 +34,13 @@ def make_device(resp):
 
 
 # Update existing device
+# Throws exception
 def update_device(device, resp):
     # Parse API response into dictionary of data
     d = parse_object(resp)
 
-    # Save original if updated data is invalid
-    device_original = device
+    # Checking for diff in message
+    device_original_last = device.last_time
 
     # Assign all the data to object
     device.callsign    = d.get("callsign")
@@ -52,13 +53,16 @@ def update_device(device, resp):
     device.heading     = d.get("heading")
     device.device_key  = d.get("device_key")
     
-    # print(f"Updated {device.name}")
+    # Print if Data actually Updates
+    # if device.last_time != device_original_last:
+    #     print(f"Updated {device.name} | Prev lon : {device_original_last} | New lon {device.last_time}")
     
-    # If updated Data is missing values -> Ignore
+    # If updated Data is missing values : Throw Exception
     try:
         verify_data(device)
     except ValueError:
-        return(device_original)
+        print(f"{device} : Missing Data, Not Updating")
+        return()
 
     return(device)
 
