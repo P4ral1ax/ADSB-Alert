@@ -2,3 +2,4 @@ config.txt
 adsb_plan.txt
 __pycache__
 test/
+new_config.txt

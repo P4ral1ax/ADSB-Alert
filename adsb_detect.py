@@ -42,7 +42,7 @@ def update_devices(devices_dict, devices, key):
                 # Add new device with the device ID being the key in the dictionary
                 device_new = adsb_make_device.make_device(resp)
                 time_convert = datetime.datetime.fromtimestamp(int(get_timestamp(key)))
-                print(f"New Device : {d} | {time_convert}")
+                print(f"New Device : {d} | {device_new.name} |  {time_convert} | {len(devices_dict)} Devices")
                 devices_dict[d] = device_new
             except AttributeError:
                 # Missing Data : Ignore
@@ -57,13 +57,12 @@ def filter_devices(key, devices_dict):
     # Get the current timestamp
     timestamp = int(get_timestamp(key))
     # For each key in the Dictionary
-    keys = devices_dict.keys()
-    for key in keys:
-        device = devices_dict[key]
+    for i in list(devices_dict):
+        device = devices_dict[i]
         # If the last seen is older than the search interval then delete
-        if (device.last_time - TIME_LIMIT_INTERVAL) <= timestamp:
-            print(f"Deleting {device.callsign}")
-            deleted = devices_dict.pop(key)
+        if ((timestamp - device.last_time) > TIME_LIMIT_INTERVAL):
+            print(f"Deleting {i} | {device.name} | Last Seen {timestamp - device.last_time} Sec Ago | {len(devices_dict)} Devices")
+            del devices_dict[i]
         else:
             pass
     return(devices_dict)
@@ -102,6 +101,8 @@ def get_request(key, url_path):
     return(result)
 
 
+def parse_config(file):
+    pass
 
 ## Main Function ##
 def main():
@@ -138,7 +139,7 @@ def main():
             time.sleep(10)
 
             # Clear List
-            # device_dict = filter_devices(key_dict, device_dict) -> Just gives dictionary changed size suring iteration
+            device_dict = filter_devices(key_dict, device_dict) # -> Just gives dictionary changed size suring iteration
 
             #  Print Devices
             # show_all_devices(device_dict)
@@ -150,6 +151,7 @@ def main():
 main()
 
 # TODO - Add "cleanup" function to remove Out of Range or Old Devices OR Make seperate dictionary
-# TODO - Setup configuration file for IP, Time Range, Base URL, Other options
+# TODO - Setup configuration file for IP, Time Range, Base URL, Other options - > Config Parser
 # TODO - Geo + Trajcetory Detection https://geopy.readthedocs.io/en/stable/#module-geopy.distance
 # TODO - Takeoff detection
+# TODO - Ignore devices with missing or nonetype data
