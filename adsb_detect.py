@@ -7,9 +7,9 @@ import configparser
 import datetime
 import time
 
-KISMET_IP="192.168.1.252"
-API_BASE_URL=f"http://{KISMET_IP}:2501"
-TIME_LIMIT_INTERVAL=360
+KISMET_IP=""
+TIME_LIMIT_INTERVAL=600
+REFRESH_WAIT=10
 
 
 ## Print all Devices ##
@@ -54,7 +54,8 @@ def update_devices(devices_dict, devices, key):
                 pass
             # Missing Essential Data : Skip Device
             except ValueError as err:
-                print(f"{d} : {str(err)}")
+                # print(f"{d} : {str(err)}")
+                pass
 
 
     # Return dictionary after all objects updated
@@ -112,23 +113,41 @@ def get_request(key, url_path):
 
 
 def parse_config(file):
-    pass
+    # Remind Python that they are infact Global variables
+    global KISMET_IP
+    global REFRESH_WAIT
+    global TIME_LIMIT_INTERVAL
+
+    # Parse Config File for Settings
+    parser = configparser.ConfigParser()
+    parser.read(file)
+    KISMET_IP = parser.get('Config', 'KismetIP')
+    REFRESH_WAIT = int(parser.get('Config', 'Refresh'))
+    TIME_LIMIT_INTERVAL = int(parser.get('Config', 'DeviceLife'))
+    key = parser.get('Config', 'APIKey')
+
+    # Remind Python that the IP goes in the URL
+    global API_BASE_URL
+    API_BASE_URL=f"http://{KISMET_IP}:2501"
+
+    # Return Key (Don't Save as Global Variable)
+    return(key)
+
 
 ## Main Function ##
 def main():
-    # Read API Key from designated file
-    print("\nReading API Key...")
-    f = open("config.txt", "r")
-    api_key = f.read() 
-    print(f"Key Found : {api_key[0:5]}******************")
+    # Read Config File
+    api_key = parse_config("config.txt") 
+    print(f"\nKey Found : {api_key[0:5]}******************")
+    print(f"Kismet IP : {KISMET_IP}")
+    print(f"Refresh Rate : {REFRESH_WAIT}")
+    print(f"Device Life : {TIME_LIMIT_INTERVAL}")
 
     # Requests requires Dictionary Format for Cookies
-    print(f"Creating Key Dictionary...")
     key_dict = {"KISMET": api_key}
     
     # Enter Loop
     print("\n*** Starting ***")
-
     ### Main Loop ###
     device_dict = {}
     try:
@@ -146,11 +165,12 @@ def main():
             device_dict = update_devices(device_dict, new_device_list, key_dict)
             # Clean Old Devices
             device_dict = filter_devices(key_dict, device_dict) # -> Just gives dictionary changed size suring iteration
-            
-            time.sleep(10)
 
-            #  Print Devices
-            # show_all_devices(device_dict)
+            # Detect Takeoff
+
+            # Detect Landing
+            
+            time.sleep(REFRESH_WAIT)
 
     except KeyboardInterrupt:
         print('Program Interrupted... Exiting')
@@ -158,8 +178,19 @@ def main():
 
 main()
 
-# TODO - Add "cleanup" function to remove Out of Range or Old Devices OR Make seperate dictionary
-# TODO - Setup configuration file for IP, Time Range, Base URL, Other options - > Config Parser
+
+## Part 1 - Detection
+# TODO - Add ICAO To Dataclass
+# TODO - Add "cleanup" function to remove Out of Range
 # TODO - Geo + Trajcetory Detection https://geopy.readthedocs.io/en/stable/#module-geopy.distance
 # TODO - Takeoff detection
-# TODO (DONE) - Ignore devices with missing or nonetype data in important fields (last_time, name, coordinates, heading) - Use Exeptions
+# TODO - Some Sort of Status GUI Thing
+
+## Part 2 - Trends 
+# TODO - Log All times a Device is Seen (Use ICAO as Key)
+# TODO - Log All Detections (Type + ICAO)
+# TODO - Device trends by all or single device (by device or all)
+# TODO - Trends of Detections
+# TODO - Detect Wierd Trends
+
+## Part 3 - GUI?????

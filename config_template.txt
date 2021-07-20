@@ -1,0 +1,6 @@
+[Config]
+APIKey=
+KismetIP=
+Port=
+DeviceLife=
+Refresh=
