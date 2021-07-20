@@ -137,7 +137,11 @@ def parse_config(file):
 ## Main Function ##
 def main():
     # Read Config File
-    api_key = parse_config("config.txt") 
+    try:
+        api_key = parse_config("config.txt") 
+    except configparser.NoSectionError as err:
+        print("Missing or Incorrect Configuration File. Exiting.")
+        quit()
     print(f"\nKey Found : {api_key[0:5]}******************")
     print(f"Kismet IP : {KISMET_IP}")
     print(f"Refresh Rate : {REFRESH_WAIT}")
