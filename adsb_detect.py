@@ -4,10 +4,23 @@ import json
 import adsb_dataclass
 import adsb_make_device
 import configparser
+import datetime
 import time
 
-kismet_ip="192.168.1.252"
-api_base_url=f"http://{kismet_ip}:2501"
+KISMET_IP="192.168.1.252"
+API_BASE_URL=f"http://{KISMET_IP}:2501"
+TIME_LIMIT_INTERVAL=360
+
+
+## Print all Devices ##
+def show_all_devices(devices_dict):
+    counter = 0
+    for device in devices_dict:
+        print("-----------------------------------")
+        print(f"Callsign : {devices_dict[device].callsign}\nHeading : {devices_dict[device].heading}\nSpeed: {devices_dict[device].speed}\nAltitude : {devices_dict[device].alt}")
+        if (counter == 5):
+            break
+        counter = counter + 1
 
 
 ## Updates Existing Devices and Adds new Devices ##
@@ -28,7 +41,8 @@ def update_devices(devices_dict, devices, key):
             try:  
                 # Add new device with the device ID being the key in the dictionary
                 device_new = adsb_make_device.make_device(resp)
-                print(f"Found New Device : {d} : {device_new.name}")
+                time_convert = datetime.datetime.fromtimestamp(int(get_timestamp(key)))
+                print(f"New Device : {d} | {time_convert}")
                 devices_dict[d] = device_new
             except AttributeError:
                 # Missing Data : Ignore
@@ -38,6 +52,23 @@ def update_devices(devices_dict, devices, key):
     return(devices_dict)
 
 
+## Cleans out Old Devices ##
+def filter_devices(key, devices_dict):
+    # Get the current timestamp
+    timestamp = int(get_timestamp(key))
+    # For each key in the Dictionary
+    keys = devices_dict.keys()
+    for key in keys:
+        device = devices_dict[key]
+        # If the last seen is older than the search interval then delete
+        if (device.last_time - TIME_LIMIT_INTERVAL) <= timestamp:
+            print(f"Deleting {device.callsign}")
+            deleted = devices_dict.pop(key)
+        else:
+            pass
+    return(devices_dict)
+
+    
 ## Gets the Device Info API Response ##
 def get_device_info(key, device_id):
     path = f"/devices/by-key/{device_id}/device.json"
@@ -66,15 +97,13 @@ def get_timestamp(key):
 def get_request(key, url_path):
     # Uses API key and Path to do a request
     # Returns : The object result (str)
-    url = f"{api_base_url}{url_path}"
+    url = f"{API_BASE_URL}{url_path}"
     result = requests.get(url, cookies=key)
     return(result)
 
 
 
-#
-# Main Function
-#
+## Main Function ##
 def main():
     # Read API Key from designated file
     print("\nReading API Key...")
@@ -98,14 +127,22 @@ def main():
             # print(f"Current Timestamp : {curr_time}")
 
             # Look at all active devices (Last 30m) TODO - Make Adjustable in Config
-            time_limit = str(int(curr_time) - 1800)
+            time_limit = str(int(curr_time) - TIME_LIMIT_INTERVAL)
             resp = get_devices(key_dict, time_limit)
             new_device_list = adsb_parse.parse_all_devices(resp)
 
             # Update Device Dictionary with new list
             device_dict = update_devices(device_dict, new_device_list, key_dict)
             
+            
             time.sleep(10)
+
+            # Clear List
+            # device_dict = filter_devices(key_dict, device_dict) -> Just gives dictionary changed size suring iteration
+
+            #  Print Devices
+            # show_all_devices(device_dict)
+
     except KeyboardInterrupt:
         print('Program Interrupted... Exiting')
 
@@ -114,3 +151,5 @@ main()
 
 # TODO - Add "cleanup" function to remove Out of Range or Old Devices OR Make seperate dictionary
 # TODO - Setup configuration file for IP, Time Range, Base URL, Other options
+# TODO - Geo + Trajcetory Detection https://geopy.readthedocs.io/en/stable/#module-geopy.distance
+# TODO - Takeoff detection

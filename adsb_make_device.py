@@ -20,6 +20,8 @@ def make_device(resp):
     heading     = d.get("heading")
     device_key  = d.get("device_key")
    
+    # print(f"Created New Device {d.name}")
+
     return(Aircraft(callsign, name, last_time, lat, lon, alt, speed, heading, device_key))
 
 # Update existing device
@@ -38,4 +40,6 @@ def update_device(device, resp):
     device.heading     = d.get("heading")
     device.device_key  = d.get("device_key")
     
+    # print(f"Updated {device.name}")
+
     return()
