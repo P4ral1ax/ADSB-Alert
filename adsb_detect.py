@@ -36,17 +36,22 @@ def update_devices(devices_dict, devices, key):
         # If exists, update info. Else create new object and add to dictionary
         if d in devices_dict.keys():
             # Update object using device ID to grab from dictionary
-            adsb_make_device.update_device(devices_dict.get(d), resp)
+            device_updated = adsb_make_device.update_device(devices_dict.get(d), resp)
+            devices_dict[d] = device_updated
         else:
             try:  
                 # Add new device with the device ID being the key in the dictionary
-                device_new = adsb_make_device.make_device(resp)
+                device_new = adsb_make_device.make_device(resp) # Throws ValueError
                 time_convert = datetime.datetime.fromtimestamp(int(get_timestamp(key)))
-                print(f"New Device : {d} | {device_new.name} |  {time_convert} | {len(devices_dict)} Devices")
                 devices_dict[d] = device_new
+                print(f"New Device : {d} | {device_new.name} |  {time_convert} | {len(devices_dict)} Devices")
+            # Missing Data : Ignore
             except AttributeError:
-                # Missing Data : Ignore
                 pass
+            # Missing Essential Data : Skip Device
+            except ValueError as err:
+                print(f"{d} : {err.args}")
+
 
     # Return dictionary after all objects updated
     return(devices_dict)
@@ -60,9 +65,10 @@ def filter_devices(key, devices_dict):
     for i in list(devices_dict):
         device = devices_dict[i]
         # If the last seen is older than the search interval then delete
+        # Might Need Try Statement? Data is verified so this shouldnt be an issue
         if ((timestamp - device.last_time) > TIME_LIMIT_INTERVAL):
-            print(f"Deleting {i} | {device.name} | Last Seen {timestamp - device.last_time} Sec Ago | {len(devices_dict)} Devices")
             del devices_dict[i]
+            print(f"Deleted {i} | {device.name} | Last Seen {timestamp - device.last_time} Sec Ago | {len(devices_dict)} Devices")
         else:
             pass
     return(devices_dict)
@@ -134,12 +140,10 @@ def main():
 
             # Update Device Dictionary with new list
             device_dict = update_devices(device_dict, new_device_list, key_dict)
-            
+            # Clean Old Devices
+            device_dict = filter_devices(key_dict, device_dict) # -> Just gives dictionary changed size suring iteration
             
             time.sleep(10)
-
-            # Clear List
-            device_dict = filter_devices(key_dict, device_dict) # -> Just gives dictionary changed size suring iteration
 
             #  Print Devices
             # show_all_devices(device_dict)
@@ -154,4 +158,4 @@ main()
 # TODO - Setup configuration file for IP, Time Range, Base URL, Other options - > Config Parser
 # TODO - Geo + Trajcetory Detection https://geopy.readthedocs.io/en/stable/#module-geopy.distance
 # TODO - Takeoff detection
-# TODO - Ignore devices with missing or nonetype data
+# TODO (DONE) - Ignore devices with missing or nonetype data in important fields (last_time, name, coordinates, heading) - Use Exeptions
