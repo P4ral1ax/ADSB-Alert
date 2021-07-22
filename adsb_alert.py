@@ -3,6 +3,7 @@ import requests
 import json
 import adsb_dataclass
 import adsb_make_device
+import adsb_detect
 import configparser
 import datetime
 import time
@@ -10,6 +11,10 @@ import time
 KISMET_IP=""
 TIME_LIMIT_INTERVAL=600
 REFRESH_WAIT=10
+
+## Send Alerts to Kismet + Devices ##
+def send_alert(key, msg):
+    pass
 
 
 ## Print all Devices ##
@@ -160,7 +165,7 @@ def main():
             curr_time = get_timestamp(key_dict)
             # print(f"Current Timestamp : {curr_time}")
 
-            # Look at all active devices (Last 30m) TODO - Make Adjustable in Config
+            # Look at all active devices (Last 30m)
             time_limit = str(int(curr_time) - TIME_LIMIT_INTERVAL)
             resp = get_devices(key_dict, time_limit)
             new_device_list = adsb_parse.parse_all_devices(resp)
@@ -171,9 +176,11 @@ def main():
             device_dict = filter_devices(key_dict, device_dict) # -> Just gives dictionary changed size suring iteration
 
             # Detect Takeoff
-
+            adsb_detect.detect_landings(device_dict)
+           
             # Detect Landing
-            
+            adsb_detect.detect_takeoff(device_dict)
+
             time.sleep(REFRESH_WAIT)
 
     except KeyboardInterrupt:
@@ -187,7 +194,8 @@ main()
 # TODO - Add ICAO To Dataclass
 # TODO - Add "cleanup" function to remove Out of Range
 # TODO - Geo + Trajcetory Detection https://geopy.readthedocs.io/en/stable/#module-geopy.distance
-# TODO - Takeoff detection
+# TODO - Takeoff detection  
+# TODO - Stop Repeat Alerts (block alert again for ~30 min)
 # TODO - Some Sort of Status GUI Thing
 # TODO - Fix Config Workflow
 
