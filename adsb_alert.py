@@ -176,7 +176,7 @@ def main():
             device_dict = filter_devices(key_dict, device_dict) # -> Just gives dictionary changed size suring iteration
 
             # Detect Takeoff
-            adsb_detect.detect_landings(device_dict)
+            device_dict = adsb_detect.detect_landings(device_dict)
            
             # Detect Landing
             adsb_detect.detect_takeoff(device_dict)
@@ -193,10 +193,10 @@ main()
 ## Part 1 - Detection
 # TODO - Add ICAO To Dataclass
 # TODO - Add "cleanup" function to remove Out of Range
-# TODO - Geo + Trajcetory Detection https://geopy.readthedocs.io/en/stable/#module-geopy.distance
+# TODO - Geo + Trajcetory Detection  |  https://geopy.readthedocs.io/en/stable/#module-geopy.distance
 # TODO - Takeoff detection  
 # TODO - Stop Repeat Alerts (block alert again for ~30 min)
-# TODO - Some Sort of Status GUI Thing
+# TODO - Make Dashboard  |  https://pusher.com/tutorials/live-dashboard-python/
 # TODO - Fix Config Workflow
 
 ## Part 2 - Trends 

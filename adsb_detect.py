@@ -1,6 +1,9 @@
 import math
 from turfpy.measurement import boolean_point_in_polygon  # https://stackoverflow.com/questions/43892459/check-if-geo-point-is-inside-or-outside-of-polygon
 from geojson import Point, Polygon, Feature 
+import adsb_make_device
+
+ALERT_RANGE=1800 # 30 Min
 
 ## ROC ##
 # LANDING_POLYGON = [(-77.70, 43.11), (-77.67, 43.10), (-77.67, 43.01), (-77.81, 43.06)] 
@@ -44,6 +47,7 @@ def detect_landings(devices):
 
         # Seperated for Ez reading
         # Is it in target zone
+        # Fuck you I'll use 4 if statements in a row if I want to
         if (in_zone(lat, lon)):
 
             # Is it at a low enough altitude
@@ -51,9 +55,16 @@ def detect_landings(devices):
 
                 # Is it heading towards the airport
                 if (LANDING_HEADING[0] < aircraft.heading < LANDING_HEADING[1]):
-                    # Fire Alert
-                    # print(f"Detected Aircraft Landing : {aircraft.name} | LAT : {aircraft.lat} LON : {aircraft.lon} | ALT : {aircraft.alt} | Heading : {aircraft.heading}")
-                    pass
+                    
+                    # Has this recently fired alert? Yes -> Pass, No -> Enter 
+                    if ((aircraft.last_time - aircraft.last_alert) > ALERT_RANGE):
+                        updated_aircraft = adsb_make_device.update_last_alert(aircraft)
+                        devices[device] = updated_aircraft 
+                        print(f"Detected Aircraft Landing : {updated_aircraft.name} | LAT : {updated_aircraft.lat} LON : {updated_aircraft.lon} | ALT : {updated_aircraft.alt} | Heading : {updated_aircraft.heading}\n    Last Alert : {updated_aircraft.last_alert}")
+
+    # Return Updated Devices
+    # Need this because we need to update the last time a device was alerted on
+    return(devices)                     
     
 
 
