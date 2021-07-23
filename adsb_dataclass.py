@@ -8,7 +8,7 @@ from typing import List
 # Define the Dataclass for an Aircraft/Object
 @dataclass
 class Aircraft:
-    __slots__ = ["callsign", "name", "last_time", "lat", "lon", "alt", "speed", "heading", "device_key"]
+    __slots__ = ["callsign", "name", "last_time", "lat", "lon", "alt", "speed", "heading", "device_key", "last_alert"]
     
     callsign    : str   # rtladsb.device.callsign 
     name        : str   # kismet.device.base.name
@@ -19,4 +19,4 @@ class Aircraft:
     speed       : float # kismet.device.base.location -> Kismet.common.location.last -> kismet.common.location.speed
     heading     : float # kismet.device.base.location -> Kismet.common.location.last
     device_key  : str   # kismet.device.base.key
-
+    last_alert  : int   # Custom Field

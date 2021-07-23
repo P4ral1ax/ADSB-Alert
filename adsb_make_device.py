@@ -22,7 +22,7 @@ def make_device(resp):
     device_key  = d.get("device_key")
    
     # Create the new Object
-    new_object = Aircraft(callsign, name, last_time, lat, lon, alt, speed, heading, device_key)
+    new_object = Aircraft(callsign, name, last_time, lat, lon, alt, speed, heading, device_key, last_alert=0)
 
     # Verify not Missing essential data
     # Raises Exception
@@ -78,7 +78,10 @@ def verify_data(device):
         raise ValueError("Missing Name")
     if device.alt == None:
         raise ValueError("Missing Altitude")
-    return(True)
-    
+    return(True)    
 
-        
+# Update the last alert time to the last time device was seen
+# If device doesn't update last time then device wont switch alert status
+def update_last_alert(device):
+    device.last_alert = device.last_time
+    return(device)
