@@ -181,8 +181,10 @@ def main():
             # Detect Landing
             adsb_detect.detect_takeoff(device_dict)
 
+            # Wait for set refresh time
             time.sleep(REFRESH_WAIT)
 
+    # Catch ctrl + c and be like "ok sure whatever"
     except KeyboardInterrupt:
         print('Program Interrupted... Exiting')
 
