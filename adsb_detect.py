@@ -7,7 +7,7 @@ ALERT_RANGE=1800 # 30 Min
 
 ## ROC ##
 # LANDING_POLYGON = [(-77.70, 43.11), (-77.67, 43.10), (-77.67, 43.01), (-77.81, 43.06)] 
-# LANDING_MAX_ALT = 200
+# LANDING_MAX_ALT = 200 # (METRES) 
 # LANDING_HEADING = [0, 80]
 # TAKEOFF_POLYGON = []
 
@@ -33,7 +33,7 @@ def in_zone(lat, lon):
         ]
     )
 
-    # Is the point in the polygon 
+    # Is the point in the polygon? 
     in_area = boolean_point_in_polygon(location, detection_area)
     return(in_area)
 
@@ -47,7 +47,7 @@ def detect_landings(devices):
 
         # Seperated for Ez reading
         # Is it in target zone
-        # Fuck you I'll use 4 if statements in a row if I want to
+        # Fuck you I'll use 4 if statements in a row if I want to (thats a 2 extra just in this comment)
         if (in_zone(lat, lon)):
 
             # Is it at a low enough altitude

@@ -1,7 +1,6 @@
 import adsb_parse
 import requests
 import json
-import adsb_dataclass
 import adsb_make_device
 import adsb_detect
 import configparser
@@ -194,12 +193,10 @@ main()
 
 ## Part 1 - Detection
 # TODO - Add ICAO To Dataclass
-# TODO - Add "cleanup" function to remove Out of Range
-# TODO - Geo + Trajcetory Detection  |  https://geopy.readthedocs.io/en/stable/#module-geopy.distance
 # TODO - Takeoff detection  
-# TODO - Stop Repeat Alerts (block alert again for ~30 min)
 # TODO - Make Dashboard  |  https://pusher.com/tutorials/live-dashboard-python/
 # TODO - Fix Config Workflow
+# TODO - Tune Alerting
 
 ## Part 2 - Trends 
 # TODO - Log All times a Device is Seen (Use ICAO as Key)
