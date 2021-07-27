@@ -142,6 +142,7 @@ def parse_config(file):
 def main():
     # Read Config File
     try:
+        print(f"Open Config  | {datetime.now()}")
         api_key = parse_config("config.txt") 
     except:
         print("Missing or Incorrect Configuration File. Exiting.")
@@ -160,32 +161,43 @@ def main():
     device_dict = {}
     try:
         while True:
+            
             # Get Timstamp
+            print(f"Get Timstamp | {datetime.now()}")
             curr_time = get_timestamp(key_dict)
             # print(f"Current Timestamp : {curr_time}")
 
             # Look at all active devices (Last 30m)
             time_limit = str(int(curr_time) - TIME_LIMIT_INTERVAL)
+            print(f"Get Devices | {datetime.now()}")
             resp = get_devices(key_dict, time_limit)
+            print(f"Parse all Devices | {datetime.now()}")
             new_device_list = adsb_parse.parse_all_devices(resp)
 
             # Update Device Dictionary with new list
+            print(f"Update Devices | {datetime.now()}")
             device_dict = update_devices(device_dict, new_device_list, key_dict)
             # Clean Old Devices
+            print(f"Clean Devices | {datetime.now()}")
             device_dict = filter_devices(key_dict, device_dict) # -> Just gives dictionary changed size suring iteration
 
             # Detect Takeoff
+            print(f"Detect Landings | {datetime.now()}")
             device_dict = adsb_detect.detect_landings(device_dict)
            
             # Detect Landing
+            print(f"Detect Takeoff | {datetime.now()}")
             adsb_detect.detect_takeoff(device_dict)
 
             # Wait for set refresh time
+            print(f"Sleep | {datetime.now()}")
             time.sleep(REFRESH_WAIT)
 
     # Catch ctrl + c and be like "ok sure whatever"
     except KeyboardInterrupt:
         print('Program Interrupted... Exiting')
+
+    print(f"Broke Out of Loop | {datetime.now()}")
 
 
 main()
