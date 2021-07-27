@@ -1,3 +1,4 @@
+from requests.exceptions import RequestException
 import adsb_parse
 import requests
 import json
@@ -60,6 +61,10 @@ def update_devices(devices_dict, devices, key):
             except ValueError as err:
                 # print(f"{d} : {str(err)}")
                 pass
+            # Request Couldn't complete
+            except RequestException as err:
+                # Add function to wait until kismet is back
+                pass
 
 
     # Return dictionary after all objects updated
@@ -112,7 +117,7 @@ def get_request(key, url_path):
     # Uses API key and Path to do a request
     # Returns : The object result (str)
     url = f"{API_BASE_URL}{url_path}"
-    result = requests.get(url, cookies=key)
+    result = requests.get(url, cookies=key, timeout=10)
     return(result)
 
 
@@ -142,7 +147,6 @@ def parse_config(file):
 def main():
     # Read Config File
     try:
-        print(f"Open Config  | {datetime.now()}")
         api_key = parse_config("config.txt") 
     except:
         print("Missing or Incorrect Configuration File. Exiting.")
@@ -163,41 +167,31 @@ def main():
         while True:
             
             # Get Timstamp
-            print(f"Get Timstamp | {datetime.now()}")
             curr_time = get_timestamp(key_dict)
             # print(f"Current Timestamp : {curr_time}")
 
             # Look at all active devices (Last 30m)
             time_limit = str(int(curr_time) - TIME_LIMIT_INTERVAL)
-            print(f"Get Devices | {datetime.now()}")
             resp = get_devices(key_dict, time_limit)
-            print(f"Parse all Devices | {datetime.now()}")
             new_device_list = adsb_parse.parse_all_devices(resp)
 
             # Update Device Dictionary with new list
-            print(f"Update Devices | {datetime.now()}")
             device_dict = update_devices(device_dict, new_device_list, key_dict)
             # Clean Old Devices
-            print(f"Clean Devices | {datetime.now()}")
             device_dict = filter_devices(key_dict, device_dict) # -> Just gives dictionary changed size suring iteration
 
             # Detect Takeoff
-            print(f"Detect Landings | {datetime.now()}")
             device_dict = adsb_detect.detect_landings(device_dict)
            
             # Detect Landing
-            print(f"Detect Takeoff | {datetime.now()}")
             adsb_detect.detect_takeoff(device_dict)
 
             # Wait for set refresh time
-            print(f"Sleep | {datetime.now()}")
             time.sleep(REFRESH_WAIT)
 
     # Catch ctrl + c and be like "ok sure whatever"
     except KeyboardInterrupt:
         print('Program Interrupted... Exiting')
-
-    print(f"Broke Out of Loop | {datetime.now()}")
 
 
 main()
@@ -209,6 +203,7 @@ main()
 # TODO - Make Dashboard  |  https://pusher.com/tutorials/live-dashboard-python/
 # TODO - Fix Config Workflow
 # TODO - Tune Alerting
+# TODO - Add Better bad Request Handling
 
 ## Part 2 - Trends 
 # TODO - Log All times a Device is Seen (Use ICAO as Key)
