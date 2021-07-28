@@ -19,9 +19,20 @@ REFRESH_WAIT=10
 def send_alert(key, msg):
     pass
 
-## Check If Kismet Brokey & Blocl if so ##
+
+## Check If Kismet Brokey & Block if so ##
 def check_kismet_status(key):
-    pass
+    while True:
+        try:
+            # If can get the API status -> Assume API Functional
+            url = (f"http://{KISMET_IP}:2501/system/status.json")
+            requests.get(url, cookies=key, timeout=1)
+            return()
+        # Catch any timeout or request Exception -> API Brokey
+        except requests.exceptions.RequestException as e:  # This is the correct syntax
+            print(f"Unable to Connect to API : Retrying Connection : {datetime.datetime.now()}")
+            time.sleep(10)
+
 
 ## Print all Devices ##
 def show_all_devices(devices_dict):
