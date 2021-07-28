@@ -1,6 +1,7 @@
 from requests.exceptions import RequestException
-from requests.adapters import HTTPAdapter
+from requests.adapters import HTTPAdapter, MaxRetryError
 from requests.exceptions import ConnectionError
+from requests.packages.urllib3.util.retry import Retry
 import adsb_parse
 import requests
 import json
@@ -18,6 +19,9 @@ REFRESH_WAIT=10
 def send_alert(key, msg):
     pass
 
+## Check If Kismet Brokey & Blocl if so ##
+def check_kismet_status(key):
+    pass
 
 ## Print all Devices ##
 def show_all_devices(devices_dict):
@@ -38,7 +42,7 @@ def update_devices(devices_dict, devices, key):
         d = devices[i]
 
         # Get Info Once for Device ID
-        resp = get_device_info(key, d)
+        resp = get_device_info(key, d) 
 
         # If exists, update info. Else create new object and add to dictionary
         if d in devices_dict.keys():
@@ -93,14 +97,28 @@ def filter_devices(key, devices_dict):
 ## Gets the Device Info API Response ##
 def get_device_info(key, device_id):
     path = f"/devices/by-key/{device_id}/device.json"
-    resp = get_request(key, path)
+
+    # Try to get device Data
+    try:
+        resp = get_request(key, path)
+    except MaxRetryError:
+        print(f"{device_id} | Reached Max Retries... Returning Empty Device")
+        resp = ""
+    
+    # Return Result
     return(resp)
 
 
 ## Gets the list of ADS-B devices in specified timeframe ##
 def get_devices(key, timestamp):
     path = f"/devices/views/phy-RTLADSB/last-time/{timestamp}/devices.json"
-    resp = get_request(key, path)
+
+    # Try to get device list
+    try:
+        resp = get_request(key, path)
+    except MaxRetryError:
+        print(f"Reached Max Retries... Returning Empty Device List")
+        resp = ""
     return(resp)
 
 
@@ -113,19 +131,39 @@ def get_timestamp(key):
         timestamp = json.loads(time_resp.text)
         timestamp_sec = timestamp.get("kismet.system.timestamp.sec")
         return(timestamp_sec)
-    except:
-        print("Request Timed Out.")
+    except MaxRetryError:
+        print("Request Timed Out. Using Local Time")
+        return(str(round(time.time())))
+    except Exception as err:
+        print(f"Unknown Error in get_timestamp : {err}")
 
 
 ## All "get" requests go through this command ##
+# Throws Exception MaxRetryError
 def get_request(key, url_path):
     # Uses API key and Path to do a request
     # Returns : The object result (str)
+
+    # Define args for HTTP Adapter  
+    retry_strategy = Retry(
+        total=3,  # 3 Retries
+        status_forcelist=[400, 401, 403, 404, 429, 500, 502, 503, 504],
+        method_whitelist=["HEAD", "GET", "OPTIONS"]
+    )
+
+    # Create HTTP session adapter
+    adapter = HTTPAdapter(max_retries=retry_strategy)
+    http = requests.session()
+    http.mount("http://", adapter)
+
+    # Try Request 
+    ## THROWS EXCEPTION MaxRetryError ##
     url = f"{API_BASE_URL}{url_path}"
-    result = requests.get(url, cookies=key, timeout=10)
+    result = http.get(url, cookies=key)
     return(result)
+    
 
-
+## Read Configuration File and Set Values ##
 def parse_config(file):
     # Remind Python that they are infact Global variables
     global KISMET_IP
@@ -171,6 +209,10 @@ def main():
     try:
         while True:
             
+            # Check Kismet Status (Is It Up?)
+            # Block until back up
+            check_kismet_status(key_dict)
+
             # Get Timstamp
             curr_time = get_timestamp(key_dict)
             # print(f"Current Timestamp : {curr_time}")
