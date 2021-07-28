@@ -63,6 +63,8 @@ def update_device(device, resp):
     except ValueError:
         print(f"{device} : Missing Data, Not Updating")
         return()
+    except TimeoutError:
+        print(f"Request Timed out : Skipping")
 
     return(device)
 

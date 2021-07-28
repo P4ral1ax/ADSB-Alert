@@ -1,4 +1,6 @@
 from requests.exceptions import RequestException
+from requests.adapters import HTTPAdapter
+from requests.exceptions import ConnectionError
 import adsb_parse
 import requests
 import json
@@ -106,10 +108,13 @@ def get_devices(key, timestamp):
 def get_timestamp(key):
     # Get the current timestamp from Kismet
     # Returns : Timstamp (str)
-    time_resp = get_request(key, "/system/timestamp.json")
-    timestamp = json.loads(time_resp.text)
-    timestamp_sec = timestamp.get("kismet.system.timestamp.sec")
-    return(timestamp_sec)
+    try:
+        time_resp = get_request(key, "/system/timestamp.json")
+        timestamp = json.loads(time_resp.text)
+        timestamp_sec = timestamp.get("kismet.system.timestamp.sec")
+        return(timestamp_sec)
+    except:
+        print("Request Timed Out.")
 
 
 ## All "get" requests go through this command ##
