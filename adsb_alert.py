@@ -57,7 +57,11 @@ def update_devices(devices_dict, devices, key):
         d = devices[i]
 
         # Get Info Once for Device ID
-        resp = get_device_info(key, d) 
+        try:
+            resp = get_device_info(key, d) 
+        except Exception:
+            print(f"{d} | Failed to get Information, Skipping")
+            break
 
         # If exists, update info. Else create new object and add to dictionary
         if d in devices_dict.keys():
@@ -68,6 +72,8 @@ def update_devices(devices_dict, devices, key):
                 devices_dict[d] = device_updated
             except ValueError as err:
                 print("Update Missing Data : Ignoring")
+            except Timeout as err:
+                print("Update Failed : Ignoring")
         else:
             try:  
                 # Add new device with the device ID being the key in the dictionary
@@ -110,6 +116,7 @@ def filter_devices(key, devices_dict):
 
 
 ## Gets the Device Info API Response ##
+# Throws Exceptions (RequestException, Timeout)
 def get_device_info(key, device_id):
     path = f"/devices/by-key/{device_id}/device.json"
 
@@ -117,15 +124,15 @@ def get_device_info(key, device_id):
     try:
         resp = get_request(key, path)
     except requests.exceptions.RequestException:
-        print(f"{device_id} | Reached Max Retries... Returning Empty")
-        return
+        print(f"{device_id} | Reached Max Retries...")
+        raise Timeout
     except Timeout:
-        print(f"{device_id} | Request Timed Out... Returning Empty Device")
-        resp = ""
+        print(f"{device_id} | Request Timed Out...")
+        raise Timeout
     except Exception:
-        print(f"Connection Refused... Returning Empty")
-        return
-    
+        print(f"Connection Refused...")
+        raise Timeout
+        
     # Return Result
     return(resp)
 
@@ -133,17 +140,8 @@ def get_device_info(key, device_id):
 ## Gets the list of ADS-B devices in specified timeframe ##
 def get_devices(key, timestamp):
     path = f"/devices/views/phy-RTLADSB/last-time/{timestamp}/devices.json"
-
-    # Try to get device list
-    try:
-        # print("---Get Devices Request")
-        resp = get_request(key, path)
-    except requests.exceptions.RequestException:
-        print(f"Reached Max Retries... Returning Empty")
-        return
-    except Timeout:
-        print(f"Request Timed Out.... Returning Empty")
-        return
+    # Get device list ## Throws Exceptions
+    resp = get_request(key, path)
     return(resp)
 
 
@@ -243,27 +241,26 @@ def main():
             # print(f"--Timestamp-- | {datetime.datetime.now()}")
             # print(f"Current Timestamp : {curr_time}")
 
-            # Look at all active devices (Last 30m)
-            time_limit = str(int(curr_time) - TIME_LIMIT_INTERVAL)
-            # print(f"--Get Devices-- | {datetime.datetime.now()}")
-            resp = get_devices(key_dict, time_limit)
-            # print(f"--Parse Devices-- | {datetime.datetime.now()}")
-            new_device_list = adsb_parse.parse_all_devices(resp)
+            
+            try:
+                # Look at all active devices (Last 30m)
+                time_limit = str(int(curr_time) - TIME_LIMIT_INTERVAL)
+                resp = get_devices(key_dict, time_limit)
+                new_device_list = adsb_parse.parse_all_devices(resp)
 
-            # Update Device Dictionary with new list
-            # print(f"--Update Devices-- | {datetime.datetime.now()}")
-            device_dict = update_devices(device_dict, new_device_list, key_dict)
-            # Clean Old Devices
-            # print(f"--Filter Devices-- | {datetime.datetime.now()}")
-            device_dict = filter_devices(key_dict, device_dict) # -> Just gives dictionary changed size suring iteration
+                # Update Device Dictionary with new list
+                device_dict = update_devices(device_dict, new_device_list, key_dict)
+                # Clean Old Devices
+                device_dict = filter_devices(key_dict, device_dict) # -> Just gives dictionary changed size suring iteration
 
-            # Detect Takeoff
-            # print(f"--Detect Landing-- | {datetime.datetime.now()}")
-            device_dict = adsb_detect.detect_landings(device_dict)
+                # Detect Takeoff
+                device_dict = adsb_detect.detect_landings(device_dict)
            
-            # Detect Landing
-            # print(f"--Detect Takeoff-- | {datetime.datetime.now()}")
-            adsb_detect.detect_takeoff(device_dict)
+                # Detect Landing
+                adsb_detect.detect_takeoff(device_dict)
+            except Exception:
+                print("Somthing Failed, Skipping Loop")
+                pass
 
             # Wait for set refresh time
             time.sleep(REFRESH_WAIT)
