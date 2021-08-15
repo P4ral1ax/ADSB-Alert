@@ -4,3 +4,12 @@ KismetIP=
 Port=
 DeviceLife=
 Refresh=
+
+[Detection]
+# Landing
+LandingPolygon=
+MaxAlt=
+HeadingRange=
+
+# Takeoff
+TakeoffPolygon=

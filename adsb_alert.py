@@ -1,4 +1,8 @@
-from requests.exceptions import RequestException
+from requests.adapters import HTTPAdapter, MaxRetryError
+from requests.packages.urllib3.util.retry import Retry
+from urllib3.exceptions import NewConnectionError
+from requests.exceptions import Timeout
+import requests.exceptions
 import adsb_parse
 import requests
 import json
@@ -15,6 +19,23 @@ REFRESH_WAIT=10
 ## Send Alerts to Kismet + Devices ##
 def send_alert(key, msg):
     pass
+
+
+## Check If Kismet Brokey & Block if so ##
+def check_kismet_status(key):
+    while True:
+        try:
+            # If can get the API status -> Assume API Functional
+            url = (f"http://{KISMET_IP}:2501/system/status.json")
+            requests.get(url, cookies=key, timeout=1)
+            return()
+        # Catch any timeout or request Exception -> API Brokey
+        except requests.exceptions.RequestException as e:  # This is the correct syntax
+            print(f"Unable to Connect to API : Retrying Connection : {datetime.datetime.now()}")
+            time.sleep(10)
+        except Timeout:
+            print(f"API Timed Out : Retrying Connection : {datetime.datetime.now()}")
+            time.sleep(10)
 
 
 ## Print all Devices ##
@@ -36,7 +57,11 @@ def update_devices(devices_dict, devices, key):
         d = devices[i]
 
         # Get Info Once for Device ID
-        resp = get_device_info(key, d)
+        try:
+            resp = get_device_info(key, d) 
+        except Exception:
+            print(f"{d} | Failed to get Information, Skipping")
+            break
 
         # If exists, update info. Else create new object and add to dictionary
         if d in devices_dict.keys():
@@ -47,6 +72,8 @@ def update_devices(devices_dict, devices, key):
                 devices_dict[d] = device_updated
             except ValueError as err:
                 print("Update Missing Data : Ignoring")
+            except Timeout as err:
+                print("Update Failed : Ignoring")
         else:
             try:  
                 # Add new device with the device ID being the key in the dictionary
@@ -62,7 +89,7 @@ def update_devices(devices_dict, devices, key):
                 # print(f"{d} : {str(err)}")
                 pass
             # Request Couldn't complete
-            except RequestException as err:
+            except Exception as err:
                 # Add function to wait until kismet is back
                 pass
 
@@ -87,17 +114,33 @@ def filter_devices(key, devices_dict):
             pass
     return(devices_dict)
 
-    
+
 ## Gets the Device Info API Response ##
+# Throws Exceptions (RequestException, Timeout)
 def get_device_info(key, device_id):
     path = f"/devices/by-key/{device_id}/device.json"
-    resp = get_request(key, path)
+
+    # Try to get device Data
+    try:
+        resp = get_request(key, path)
+    except requests.exceptions.RequestException:
+        print(f"{device_id} | Reached Max Retries...")
+        raise Timeout
+    except Timeout:
+        print(f"{device_id} | Request Timed Out...")
+        raise Timeout
+    except Exception:
+        print(f"Connection Refused...")
+        raise Timeout
+        
+    # Return Result
     return(resp)
 
 
 ## Gets the list of ADS-B devices in specified timeframe ##
 def get_devices(key, timestamp):
     path = f"/devices/views/phy-RTLADSB/last-time/{timestamp}/devices.json"
+    # Get device list ## Throws Exceptions
     resp = get_request(key, path)
     return(resp)
 
@@ -106,21 +149,44 @@ def get_devices(key, timestamp):
 def get_timestamp(key):
     # Get the current timestamp from Kismet
     # Returns : Timstamp (str)
-    time_resp = get_request(key, "/system/timestamp.json")
-    timestamp = json.loads(time_resp.text)
-    timestamp_sec = timestamp.get("kismet.system.timestamp.sec")
-    return(timestamp_sec)
+    try:
+        time_resp = get_request(key, "/system/timestamp.json")
+        timestamp = json.loads(time_resp.text)
+        timestamp_sec = timestamp.get("kismet.system.timestamp.sec")
+        return(timestamp_sec)
+    except Exception:
+        print("Request Failed. Using Local Time")
+        return(str(round(time.time())))
 
 
 ## All "get" requests go through this command ##
+# Throws Exception MaxRetryError
+# Throws Exception Timeout
 def get_request(key, url_path):
     # Uses API key and Path to do a request
     # Returns : The object result (str)
+
+    # Define args for HTTP Adapter  
+    retry_strategy = Retry(
+        total=3,  # 3 Retries
+        status_forcelist=[400, 401, 403, 404, 429, 500, 502, 503, 504],
+        method_whitelist=["HEAD", "GET", "OPTIONS"]
+    )
+
+    # Create HTTP session adapter
+    adapter = HTTPAdapter(max_retries=retry_strategy)
+    http = requests.session()
+    http.mount("http://", adapter)
+
+    # Try Request 
+    ## THROWS EXCEPTION MaxRetryError ##
     url = f"{API_BASE_URL}{url_path}"
-    result = requests.get(url, cookies=key, timeout=10)
+    print(f"Get : {url}")
+    result = http.get(url, cookies=key, timeout=1)
     return(result)
+    
 
-
+## Read Configuration File and Set Values ##
 def parse_config(file):
     # Remind Python that they are infact Global variables
     global KISMET_IP
@@ -165,26 +231,36 @@ def main():
     device_dict = {}
     try:
         while True:
-            
+            print(f"--Loop-- | {datetime.datetime.now()}") 
+            # Check Kismet Status (Is It Up?)
+            # Block until back up
+            check_kismet_status(key_dict)
+
             # Get Timstamp
             curr_time = get_timestamp(key_dict)
+            # print(f"--Timestamp-- | {datetime.datetime.now()}")
             # print(f"Current Timestamp : {curr_time}")
 
-            # Look at all active devices (Last 30m)
-            time_limit = str(int(curr_time) - TIME_LIMIT_INTERVAL)
-            resp = get_devices(key_dict, time_limit)
-            new_device_list = adsb_parse.parse_all_devices(resp)
+            
+            try:
+                # Look at all active devices (Last 30m)
+                time_limit = str(int(curr_time) - TIME_LIMIT_INTERVAL)
+                resp = get_devices(key_dict, time_limit)
+                new_device_list = adsb_parse.parse_all_devices(resp)
 
-            # Update Device Dictionary with new list
-            device_dict = update_devices(device_dict, new_device_list, key_dict)
-            # Clean Old Devices
-            device_dict = filter_devices(key_dict, device_dict) # -> Just gives dictionary changed size suring iteration
+                # Update Device Dictionary with new list
+                device_dict = update_devices(device_dict, new_device_list, key_dict)
+                # Clean Old Devices
+                device_dict = filter_devices(key_dict, device_dict) # -> Just gives dictionary changed size suring iteration
 
-            # Detect Takeoff
-            device_dict = adsb_detect.detect_landings(device_dict)
+                # Detect Takeoff
+                device_dict = adsb_detect.detect_landings(device_dict)
            
-            # Detect Landing
-            adsb_detect.detect_takeoff(device_dict)
+                # Detect Landing
+                adsb_detect.detect_takeoff(device_dict)
+            except Exception:
+                print("Somthing Failed, Skipping Loop")
+                pass
 
             # Wait for set refresh time
             time.sleep(REFRESH_WAIT)
