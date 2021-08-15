@@ -181,7 +181,7 @@ def get_request(key, url_path):
     # Try Request 
     ## THROWS EXCEPTION MaxRetryError ##
     url = f"{API_BASE_URL}{url_path}"
-    print(f"Get : {url}")
+    # print(f"Get : {url}")
     result = http.get(url, cookies=key, timeout=1)
     return(result)
     
@@ -231,7 +231,7 @@ def main():
     device_dict = {}
     try:
         while True:
-            print(f"--Loop-- | {datetime.datetime.now()}") 
+            # print(f"--Loop-- | {datetime.datetime.now()}") 
             # Check Kismet Status (Is It Up?)
             # Block until back up
             check_kismet_status(key_dict)
